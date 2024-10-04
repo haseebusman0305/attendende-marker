@@ -34,19 +34,27 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Create or update EU Web App
+      - name: Verify and Create EU Web App
         run: |
-          az webapp create --resource-group ${{ env.RESOURCE_GROUP_EU }} \
-            --plan myAppServicePlan --name ${{ env.WEBAPP_NAME_EU }} \
-            --runtime "NODE|14-lts" --subscription ${{ secrets.SUBSCRIPTION_ID }} \
-            || echo "Web app already exists"
+          if ! az webapp show --name ${{ env.WEBAPP_NAME_EU }} --resource-group ${{ env.RESOURCE_GROUP_EU }} --subscription ${{ secrets.SUBSCRIPTION_ID }}; then
+            echo "Web app does not exist. Creating..."
+            az webapp create --resource-group ${{ env.RESOURCE_GROUP_EU }} \
+              --plan myAppServicePlan --name ${{ env.WEBAPP_NAME_EU }} \
+              --runtime "NODE|14-lts" --subscription ${{ secrets.SUBSCRIPTION_ID }}
+          else
+            echo "Web app already exists."
+          fi
 
-      - name: Create or update US Web App
+      - name: Verify and Create US Web App
         run: |
-          az webapp create --resource-group ${{ env.RESOURCE_GROUP_US }} \
-            --plan myAppServicePlan --name ${{ env.WEBAPP_NAME_US }} \
-            --runtime "NODE|14-lts" --subscription ${{ secrets.SUBSCRIPTION_ID }} \
-            || echo "Web app already exists"
+          if ! az webapp show --name ${{ env.WEBAPP_NAME_US }} --resource-group ${{ env.RESOURCE_GROUP_US }} --subscription ${{ secrets.SUBSCRIPTION_ID }}; then
+            echo "Web app does not exist. Creating..."
+            az webapp create --resource-group ${{ env.RESOURCE_GROUP_US }} \
+              --plan myAppServicePlan --name ${{ env.WEBAPP_NAME_US }} \
+              --runtime "NODE|14-lts" --subscription ${{ secrets.SUBSCRIPTION_ID }}
+          else
+            echo "Web app already exists."
+          fi
 
       - name: Deploy to Azure EU Web App
         run: |

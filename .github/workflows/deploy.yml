@@ -33,7 +33,7 @@ jobs:
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Login to Azure
-        uses: azure/login@v1
+        uses: Azure/login@v2.2.0
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 

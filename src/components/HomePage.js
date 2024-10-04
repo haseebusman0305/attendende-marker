@@ -16,7 +16,7 @@ export default function HomePage() {
           to="/add-students"
           className="bg-white text-blue-600 px-8 py-4 rounded-lg text-xl font-semibold hover:bg-blue-100 transition duration-300 text-center animate-fade-in-up"
         >
-          Add Students
+          Add Students +
         </Link>
         <Link
           to="/attendance"

@@ -5,8 +5,8 @@ on: workflow_dispatch
 env:
   RESOURCE_GROUP_EU: rg-eshoponweb-westeurope
   RESOURCE_GROUP_US: rg-eshoponweb-eastus
-  WEBAPP_NAME_EU: ${{ secrets.WEBAPP_NAME_EU }}  
-  WEBAPP_NAME_US: ${{ secrets.WEBAPP_NAME_US }} 
+  WEBAPP_NAME_EU: ${{ secrets.WEBAPP_NAME_EU }}
+  WEBAPP_NAME_US: ${{ secrets.WEBAPP_NAME_US }}
   SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
 
 jobs:
@@ -37,14 +37,18 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Create zip file for Azure deployment
+        run: |
+          zip -r build.zip .next # Adjust this path based on your build folder
+
       - name: Deploy to Azure EU Web App
         run: |
           az webapp deployment source config-zip --resource-group ${{ env.RESOURCE_GROUP_EU }} \
-            --name ${{ env.WEBAPP_NAME_EU }} --src-path ./build.zip \
+            --name ${{ env.WEBAPP_NAME_EU }} --src ./build.zip \
             --subscription ${{ secrets.SUBSCRIPTION_ID }}
 
       - name: Deploy to Azure US Web App
         run: |
           az webapp deployment source config-zip --resource-group ${{ env.RESOURCE_GROUP_US }} \
-            --name ${{ env.WEBAPP_NAME_US }} --src-path ./build.zip \
+            --name ${{ env.WEBAPP_NAME_US }} --src ./build.zip \
             --subscription ${{ secrets.SUBSCRIPTION_ID }}

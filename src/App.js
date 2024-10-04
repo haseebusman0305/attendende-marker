@@ -2,8 +2,9 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import HomePage from './components/HomePage'
 import AddStudentsPage from './components/AddStudentsPage'
-import AttendancePage from './components/AttendancePage'
-import { Toaster } from 'react-hot-toast'
+import AttendancePage from './components/AttendancePage';
+import { Toaster } from 'react-hot-toast';
+import './App.css';
 
 export default function App() {
   return (

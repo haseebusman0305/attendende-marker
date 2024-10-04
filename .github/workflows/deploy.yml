@@ -20,6 +20,9 @@ jobs:
         with:
           node-version: '18'
           
+      - name: Install Dependencies
+        run: npm install
+        
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
         

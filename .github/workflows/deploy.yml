@@ -27,7 +27,10 @@ jobs:
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
       - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: npm run build
+        
+      - name: Zip build directory
+        run: zip -r build.zip build
         
       - name: Deploy Project Artifacts to Vercel
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
@@ -37,18 +40,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Create zip file for Azure deployment
-        run: |
-          zip -r build.zip .next # Adjust this path based on your build folder
-
       - name: Deploy to Azure EU Web App
         run: |
           az webapp deployment source config-zip --resource-group ${{ env.RESOURCE_GROUP_EU }} \
-            --name ${{ env.WEBAPP_NAME_EU }} --src ./build.zip \
+            --name ${{ env.WEBAPP_NAME_EU }} --src-path ./build.zip \
             --subscription ${{ secrets.SUBSCRIPTION_ID }}
 
       - name: Deploy to Azure US Web App
         run: |
           az webapp deployment source config-zip --resource-group ${{ env.RESOURCE_GROUP_US }} \
-            --name ${{ env.WEBAPP_NAME_US }} --src ./build.zip \
+            --name ${{ env.WEBAPP_NAME_US }} --src-path ./build.zip \
             --subscription ${{ secrets.SUBSCRIPTION_ID }}

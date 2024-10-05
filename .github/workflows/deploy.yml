@@ -1,29 +1,128 @@
-name: Deploy to Vercel
-
+name: Deploy React App to Azure
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+env:
+  NODE_VERSION: '18'
+  RESOURCE_GROUP_EU: rg-eshoponweb-westeurope
+  RESOURCE_GROUP_US: rg-eshoponweb-eastus
+  WEBAPP_NAME_EU: ${{ secrets.WEBAPP_NAME_EU }}
+  WEBAPP_NAME_US: ${{ secrets.WEBAPP_NAME_US }}
+  SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
+  APP_SERVICE_PLAN_EU: myAppServicePlanEU
+  APP_SERVICE_PLAN_US: myAppServicePlanUS
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
         
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-        
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: npm run build
+
+      - name: Create web.config
+        run: |
+          cat > ./build/web.config << EOL
+          <?xml version="1.0"?>
+          <configuration>
+            <system.webServer>
+              <rewrite>
+                <rules>
+                  <rule name="React Routes" stopProcessing="true">
+                    <match url=".*" />
+                    <conditions logicalGrouping="MatchAll">
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+                      <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+                    </conditions>
+                    <action type="Rewrite" url="/" />
+                  </rule>
+                </rules>
+              </rewrite>
+              <staticContent>
+                <mimeMap fileExtension=".json" mimeType="application/json" />
+              </staticContent>
+            </system.webServer>
+          </configuration>
+          EOL
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create or Update EU App Service Plan
+        run: |
+          az appservice plan show --name ${{ env.APP_SERVICE_PLAN_EU }} --resource-group ${{ env.RESOURCE_GROUP_EU }} --subscription ${{ env.SUBSCRIPTION_ID }} || \
+          az appservice plan create --name ${{ env.APP_SERVICE_PLAN_EU }} --resource-group ${{ env.RESOURCE_GROUP_EU }} --sku B1 --is-linux --subscription ${{ env.SUBSCRIPTION_ID }}
+
+      - name: Create or Update US App Service Plan
+        run: |
+          az appservice plan show --name ${{ env.APP_SERVICE_PLAN_US }} --resource-group ${{ env.RESOURCE_GROUP_US }} --subscription ${{ env.SUBSCRIPTION_ID }} || \
+          az appservice plan create --name ${{ env.APP_SERVICE_PLAN_US }} --resource-group ${{ env.RESOURCE_GROUP_US }} --sku B1 --is-linux --subscription ${{ env.SUBSCRIPTION_ID }}
+
+      - name: Create or Update EU Web App
+        run: |
+          az webapp show --name ${{ env.WEBAPP_NAME_EU }} --resource-group ${{ env.RESOURCE_GROUP_EU }} --subscription ${{ env.SUBSCRIPTION_ID }} || \
+          az webapp create --name ${{ env.WEBAPP_NAME_EU }} --resource-group ${{ env.RESOURCE_GROUP_EU }} --plan ${{ env.APP_SERVICE_PLAN_EU }} --runtime "NODE|18-lts" --subscription ${{ env.SUBSCRIPTION_ID }}
+
+      - name: Create or Update US Web App
+        run: |
+          az webapp show --name ${{ env.WEBAPP_NAME_US }} --resource-group ${{ env.RESOURCE_GROUP_US }} --subscription ${{ env.SUBSCRIPTION_ID }} || \
+          az webapp create --name ${{ env.WEBAPP_NAME_US }} --resource-group ${{ env.RESOURCE_GROUP_US }} --plan ${{ env.APP_SERVICE_PLAN_US }} --runtime "NODE|18-lts" --subscription ${{ env.SUBSCRIPTION_ID }}
+
+      - name: Configure EU Web App Settings
+        run: |
+          az webapp config set --resource-group ${{ env.RESOURCE_GROUP_EU }} --name ${{ env.WEBAPP_NAME_EU }} --startup-file "pm2 serve /home/site/wwwroot --spa --no-daemon"
+          az webapp config appsettings set --resource-group ${{ env.RESOURCE_GROUP_EU }} --name ${{ env.WEBAPP_NAME_EU }} --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+
+      - name: Configure US Web App Settings
+        run: |
+          az webapp config set --resource-group ${{ env.RESOURCE_GROUP_US }} --name ${{ env.WEBAPP_NAME_US }} --startup-file "pm2 serve /home/site/wwwroot --spa --no-daemon"
+          az webapp config appsettings set --resource-group ${{ env.RESOURCE_GROUP_US }} --name ${{ env.WEBAPP_NAME_US }} --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+
+      - name: Deploy to EU Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.WEBAPP_NAME_EU }}
+          package: ./build
+
+      - name: Deploy to US Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.WEBAPP_NAME_US }}
+          package: ./build
+
+      - name: Verify EU Deployment
+        run: |
+          echo "Waiting for EU deployment to complete..."
+          sleep 30  # Give the app some time to start
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.WEBAPP_NAME_EU }}.azurewebsites.net)
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Deployment verification failed. Status code: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Verify US Deployment
+        run: |
+          echo "Waiting for US deployment to complete..."
+          sleep 30  # Give the app some time to start
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.WEBAPP_NAME_US }}.azurewebsites.net)
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Deployment verification failed. Status code: $RESPONSE"
+            exit 1
+          fi

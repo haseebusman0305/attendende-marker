@@ -9,7 +9,7 @@ export default function AttendancePage() {
 
     useEffect(() => {
         loadStudents();
-    }, [date]);
+    }, );
 
     const loadStudents = () => {
         try {

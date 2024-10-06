@@ -9,13 +9,13 @@ export default function AttendancePage() {
 
     useEffect(() => {
         loadStudents();
-    }, );
+    },[] );
 
     const loadStudents = () => {
         try {
             const savedStudents = localStorage.getItem('students');
             const students = savedStudents
-                ? JSON.parse(savedStudents).map(student => ({ ...student, status: '' }))
+                ? JSON.parse(savedStudents)?.map(student => ({ ...student, status: '' }))
                 : [];
 
             const newSheet = { id: Date.now(), date, students };

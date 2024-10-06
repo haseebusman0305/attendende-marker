@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// AttendancePage.js
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Trash2, Download, ChevronLeft, Calendar } from 'lucide-react';
@@ -7,11 +8,7 @@ export default function AttendancePage() {
     const [currentSheet, setCurrentSheet] = useState(null);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-    useEffect(() => {
-        loadStudents();
-    },[] );
-
-    const loadStudents = () => {
+    const loadStudents = useCallback(() => {
         try {
             const savedStudents = localStorage.getItem('students');
             const students = savedStudents
@@ -23,7 +20,11 @@ export default function AttendancePage() {
         } catch (error) {
             toast.error('Error loading students: ' + error.message);
         }
-    };
+    }, [date]);
+
+    useEffect(() => {
+        loadStudents();
+    }, [loadStudents]);
 
     const handleStatusChange = (id, status) => {
         try {
@@ -173,43 +174,43 @@ export default function AttendancePage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-    {currentSheet?.students.map((student) => (
-        <tr key={student.id} className="hover:bg-gray-50 transition duration-150">
-            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {student.name}
-            </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {student.agNumber}
-            </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <div className="flex flex-col sm:flex-row sm:space-x-20">
-                    {['Present', 'Absent', 'Leave'].map((status) => (
-                        <label key={status} className="inline-flex items-center mt-2 sm:mt-0">
-                            <input
-                                type="radio"
-                                className="form-radio h-4 w-4 text-indigo-600"
-                                name={`status-${student.id}`}
-                                value={status}
-                                checked={student.status === status}
-                                onChange={() => handleStatusChange(student.id, status)}
-                            />
-                            <span className="ml-2">{status}</span>
-                        </label>
-                    ))}
-                </div>
-            </td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <div className="flex justify-end w-full">
-                    <Trash2
-                        onClick={deleteLatestStudent}
-                        className="h-6 w-6 text-gray-500 hover:text-red-500 transition-colors duration-200 cursor-pointer"
-                        disabled={!currentSheet || currentSheet.students.length === 0}
-                    />
-                </div>
-            </td>
-        </tr>
-    ))}
-</tbody>
+                                {currentSheet?.students.map((student) => (
+                                    <tr key={student.id} className="hover:bg-gray-50 transition duration-150">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {student.name}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {student.agNumber}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <div className="flex flex-col sm:flex-row sm:space-x-20">
+                                                {['Present', 'Absent', 'Leave'].map((status) => (
+                                                    <label key={status} className="inline-flex items-center mt-2 sm:mt-0">
+                                                        <input
+                                                            type="radio"
+                                                            className="form-radio h-4 w-4 text-indigo-600"
+                                                            name={`status-${student.id}`}
+                                                            value={status}
+                                                            checked={student.status === status}
+                                                            onChange={() => handleStatusChange(student.id, status)}
+                                                        />
+                                                        <span className="ml-2">{status}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <div className="flex justify-end w-full">
+                                                <Trash2
+                                                    onClick={deleteLatestStudent}
+                                                    className="h-6 w-6 text-gray-500 hover:text-red-500 transition-colors duration-200 cursor-pointer"
+                                                    disabled={!currentSheet || currentSheet.students.length === 0}
+                                                />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
 
                         </table>
                     </div>
